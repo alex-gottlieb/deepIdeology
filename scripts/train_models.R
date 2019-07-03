@@ -145,7 +145,7 @@ evaluate <- function(model_path, X_test, y_test) {
   return(res)
 }
 
-tweets <- read_csv("data/elite_ideo_tweets.csv")
+tweets <- read_csv("data/ideology_classifier_data.csv")
 if (!file.exists("tokenizers/ideo_tweet_tokenizer")) {
   ideo_tokenizer <- text_tokenizer(num_words=20000)
   ideo_tokenizer <- fit_text_tokenizer(ideo_tokenizer, tweets$text)

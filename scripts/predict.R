@@ -37,5 +37,5 @@ predict_ideology <- function(tweets, model="LSTM", embedding_dim=25, use_glove_e
   return(preds[,1])
 }
 
-# tweets <- read_csv("data/elite_ideo_tweets.csv")
+# tweets <- read_csv("data/ideology_classifier_data.csv")
 # ideo <- predict_ideology(tweets$text)
