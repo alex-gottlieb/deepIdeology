@@ -33,8 +33,7 @@ train_lstm <- function(X_train, y_train, embeddings="w2v", embedding_dim=25, tok
   stopifnot(embedding_dim %in% list(25, 50, 100, 200))
   stopifnot(embeddings %in% list("random", "w2v", "glove"))
   stopifnot(embeddings != "random" & is.null(tokenizer))
-#  stopifnot(convolutional & !bidirectional)
-  
+
   out_fname <- sprintf("lstm_%sd.h5", embedding_dim)
   
   model <- keras_model_sequential()
@@ -48,7 +47,8 @@ train_lstm <- function(X_train, y_train, embeddings="w2v", embedding_dim=25, tok
     out_fname <- sprintf("lstm_glove_%sd.h5", embedding_dim)
   } else {
     model %>%
-      layer_embedding(input_dim = length(word_index)+1, output_dim=64)
+      layer_embedding(input_dim = length(tokenizer$num_words)+1, output_dim=64)
+    out_fname <- sprintf("lstm_w2v_%sd.h5", embedding_dim)
   }
   if (convolutional) {
     model %>%
@@ -63,7 +63,7 @@ train_lstm <- function(X_train, y_train, embeddings="w2v", embedding_dim=25, tok
   if (bidirectional) {
     model %>%
       bidirectional(layer_lstm(units=64, dropout=0.3, recurrent_dropout=0.3))
-    out_fname <- sprintf("bi-%s", out_fname)
+    if (!convolutional) out_fname <- sprintf("bi-%s", out_fname)
   } else {
     model %>% 
       layer_lstm(units=64, dropout=0.3, recurrent_dropout=0.3)
@@ -84,7 +84,7 @@ train_lstm <- function(X_train, y_train, embeddings="w2v", embedding_dim=25, tok
     callbacks = list(callback_model_checkpoint(sprintf("models/%s", out_fname), 
                                                monitor = "val_loss", 
                                                save_best_only = TRUE),
-                     callback_early_stopping(monitor = "val_loss", patience=2))
+                     callback_early_stopping(monitor = "val_loss", patience=3))
   )
   
 }
@@ -128,6 +128,28 @@ texts_to_vectors <- function(texts, tokenizer){
   return(vecs)
 }
 
+train_all_models <- function(X_train, y_train, tokenizer) {
+  for (embedding in c("random", "w2v", "glove")) {
+    for (bidirectional in c(TRUE, FALSE)) {
+      for (convolutional in c(TRUE, FALSE)) {
+        if (convolutional & !bidirectional) {
+          next
+        } else {
+          cat(sprintf("Training model with parameters:\n%s embeddings\r\nbidirectional=%s\r\nconvolutional=%s", 
+                  embedding, bidirectional, convolutional))
+          train_lstm(X_train, 
+                     y_train, 
+                     embedding,
+                     embedding_dim = 25, 
+                     tokenizer = tokenizer, 
+                     bidirectional = bidirectional,
+                     convolutional = convolutional)
+        }
+      }
+    }
+  }
+}
+
 tweets <- read_csv("data/ideology_classifier_data.csv")
 ideo_tokenizer <- load_text_tokenizer("tokenizers/ideo_tweet_tokenizer")
 texts <- texts_to_vectors(tweets$text, ideo_tokenizer)
@@ -146,26 +168,5 @@ if (!dir.exists("models")) {
   dir.create("models")
 }
 
-train_lstm(X_train, y_train, embedding_dim = 25)
-lstm_25_res <- evaluate("models/lstm_25d.h5", X_test, y_test)
-
-train_lstm(X_train, y_train, use_glove_embeddings = TRUE, embedding_dim = 25)
-lstm_glove_25_res <- evaluate("models/lstm_glove_25d.h5", X_test, y_test)
-
-train_lstm(X_train, y_train, embeddings = "w2v")
-
-train_lstm(X_train, y_train, bidirectional = TRUE, embedding_dim = 25)
-bilstm_25_res <- evaluate("models/bi-lstm_25d.h5", X_test, y_test)
-
-train_lstm(X_train, y_train, bidirectional = TRUE, use_glove_embeddings = TRUE, embedding_dim = 25)
-bilstm_glove_25_res <- evaluate("models/bi-lstm_glove_25d.h5", X_test, y_test)
-
-train_lstm(X_train, y_train, bidirectional = TRUE, convolutional = TRUE, embedding_dim = 25)
-cbilstm_25_res <- evaluate("models/c-bi-lstm.h5", X_test, y_test)
-
-train_lstm(X_train, y_train, bidirectional = TRUE, convolutional = TRUE, use_glove_embeddings = TRUE, embedding_dim = 25)
-cbilstm_glove_25_res <- evaluate("models/c-bi-lstm_glove_25d.h5", X_test, y_test)
-
-
-
+train_all_models(X_train, y_train, ideo_tokenizer)
 
