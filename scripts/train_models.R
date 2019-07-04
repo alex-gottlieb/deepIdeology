@@ -2,39 +2,11 @@ library(keras)
 library(readr)
 library(text2vec)
 library(glmnet)
+library(reticulate)
+library(purrr)
 
 setwd("~/deepIdeology/")
-
-prepare_embedding_matrix <- function(embeddings_file, embedding_dim, word_index, out_file) {
-  if (file.exists(out_file)) {
-    obj <- load(out_file)
-    return(get(obj))
-  } else {
-    embeddings_index <- new.env(parent = emptyenv())
-    lines <- readLines(embeddings_file)
-    for (line in lines) {
-      values <- strsplit(line, ' ', fixed = TRUE)[[1]]
-      word <- values[[1]]
-      coefs <- as.numeric(values[-1])
-      embeddings_index[[word]] <- coefs
-    }
-    
-    embedding_matrix <- matrix(0L, nrow = length(word_index)+1, ncol = embedding_dim)
-    for (word in names(word_index)) {
-      index <- word_index[[word]]
-      if (index >= length(word_index))
-        next
-      embedding_vector <- embeddings_index[[word]]
-      if (!is.null(embedding_vector)) {
-        # words not found in embedding index will be all-zeros.
-        embedding_matrix[index,] <- embedding_vector
-      }
-    }
-    
-    save(embedding_matrix,file=out_file)
-    return(embedding_matrix)
-  }
-}
+source("scripts/word_embeddings.R")
 
 train_baseline <- function(X_train, y_train) {
   prep_fun <- tolower
@@ -57,20 +29,19 @@ train_baseline <- function(X_train, y_train) {
   save(clf, file="models/logit.Rdata")
 }
 
-train_lstm <- function(X_train, y_train, embedding_dim=25, bidirectional=FALSE, convolutional=FALSE, use_glove_embeddings=FALSE) {
+train_lstm <- function(X_train, y_train, embeddings="w2v", embedding_dim=25, tokenizer = NULL, bidirectional=FALSE, convolutional=FALSE) {
   stopifnot(embedding_dim %in% list(25, 50, 100, 200))
+  stopifnot(embeddings %in% list("random", "w2v", "glove"))
+  stopifnot(embeddings != "random" & is.null(tokenizer))
 #  stopifnot(convolutional & !bidirectional)
   
   out_fname <- sprintf("lstm_%sd.h5", embedding_dim)
   
   model <- keras_model_sequential()
-  if (use_glove_embeddings) {
-    out_file <- sprintf( "data/embeddings/tweet_glove_%sd.Rdata", embedding_dim)
-    glove_file <- sprintf("data/glove.twitter.27B/glove.twitter.27B.%sd.txt", embedding_dim)
-    embedding_matrix <- prepare_embedding_matrix(embeddings_file = glove_file,
-                                                 embedding_dim = embedding_dim,
-                                                 word_index = word_index,
-                                                 out_file = out_file)
+  if (embeddings != "random") {
+    out_file <- sprintf( "data/embeddings/tweet_%s_%sd.Rdata", embeddings, embedding_dim)
+    embedding_matrix <- get(load(out_file))
+
     model %>% 
       layer_embedding(input_dim = dim(embedding_matrix)[1], output_dim=embedding_dim,
                       weights = list(embedding_matrix))
@@ -145,29 +116,27 @@ evaluate <- function(model_path, X_test, y_test) {
   return(res)
 }
 
-tweets <- read_csv("data/ideology_classifier_data.csv")
-if (!file.exists("tokenizers/ideo_tweet_tokenizer")) {
-  ideo_tokenizer <- text_tokenizer(num_words=20000)
-  ideo_tokenizer <- fit_text_tokenizer(ideo_tokenizer, tweets$text)
-  save_text_tokenizer(ideo_tokenizer, "tokenizers/ideo_tweet_tokenizer")
-} else {
-  ideo_tokenizer <- load_text_tokenizer("tokenizers/ideo_tweet_tokenizer")
-}
-sequences <- texts_to_sequences(ideo_tokenizer, tweets$text)
-texts <- pad_sequences(sequences)
-labels <- tweets$ideo_cat
-word_index <- ideo_tokenizer$word_index
-
 train_test_split <- function(n_obs,test_size=0.2) {
   n_train <- floor((1-test_size)*n_obs)
   train_ind <- sample(n_obs,n_train)
   train_ind
 }
 
+texts_to_vectors <- function(texts, tokenizer){
+  sequences <- texts_to_sequences(tokenizer, texts)
+  vecs <- pad_sequences(sequences)
+  return(vecs)
+}
+
+tweets <- read_csv("data/ideology_classifier_data.csv")
+ideo_tokenizer <- load_text_tokenizer("tokenizers/ideo_tweet_tokenizer")
+texts <- texts_to_vectors(tweets$text, ideo_tokenizer)
+labels <- tweets$ideo_cat
+
 train_ind <- train_test_split(nrow(tweets))
 
-X_train_raw <- tweets$text[train_ind]
-X_test_raw <- tweets$text[-train_ind]
+# X_train_raw <- tweets$text[train_ind]
+# X_test_raw <- tweets$text[-train_ind]
 X_train <- texts[train_ind,]
 X_test <- texts[-train_ind,]
 y_train <- labels[train_ind]
@@ -182,6 +151,8 @@ lstm_25_res <- evaluate("models/lstm_25d.h5", X_test, y_test)
 
 train_lstm(X_train, y_train, use_glove_embeddings = TRUE, embedding_dim = 25)
 lstm_glove_25_res <- evaluate("models/lstm_glove_25d.h5", X_test, y_test)
+
+train_lstm(X_train, y_train, embeddings = "w2v")
 
 train_lstm(X_train, y_train, bidirectional = TRUE, embedding_dim = 25)
 bilstm_25_res <- evaluate("models/bi-lstm_25d.h5", X_test, y_test)
