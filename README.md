@@ -1,2 +1,3 @@
 # deepIdeology
-Determine ideological slant of political text
+Scale ideological slant of Tweets
+
