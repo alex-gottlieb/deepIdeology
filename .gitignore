@@ -1,0 +1,8 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+embeddings
+glove.twitter.27B
+tokenizers
+models

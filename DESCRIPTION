@@ -1,12 +1,21 @@
 Package: deepIdeology
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Scale Ideological Slant of Twitter Posts
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Author: Alex Gottlieb
+Maintainer: Alex Gottlieb <Alexander.R.Gottlieb.GR@dartmouth.edu>
+Description: This package allows users to identify the ideological leanings of Twitter posts with benchmark accuracy
+    using a Long Short-Term Memory recurrent neural network model trained on a data set of Tweets labeled through
+    the Amazon Mechanical Turk crowd-sourcing platform. The best-performing models are able to classify Tweets are 
+    liberal- or conservative-leaning with 86.90% accuracy and are able to capture both directionality and degree of
+    slant.
+Depends: R (>= 3.4.4)
+License: MIT
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.1.9000
+Imports: 
+    keras,
+    dplyr,
+    smappR,
+    devtools

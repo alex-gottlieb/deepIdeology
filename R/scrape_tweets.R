@@ -1,7 +1,15 @@
-library(readr)
-library(twitteR)
-library(smappR)
-library(streamR)
+#' setup_dependencies
+#'
+#' This function should be called after package installation to properly set up dependencies.
+#' @export
+setup_dependencies <- function() {
+  library(keras)
+  install_keras()
+
+  library(devtools)
+  install_version("rmongodb", version = "1.8.0", repos = "http://cran.us.r-project.org")
+  install_github("SMAPPNYU/smappR")
+}
 
 #' scrape_tweets
 #'
@@ -23,10 +31,10 @@ scrape_tweets <- function(screen_names = NULL, ids = NULL, tweets_per_user, cred
 
   scrape_func <- function(x) {
     fname <- file.path(out_dir, paste0(x,'_tweets.json'))
-    tryCatch(getTimeline(fname,
-                         oauth_folder = credentials_dir,
-                         screen_name = x,
-                         n = tweets_per_user),
+    tryCatch(smappR::getTimeline(fname,
+                                 oauth_folder = credentials_dir,
+                                screen_name = x,
+                                n = tweets_per_user),
              error = function(e) NA)
   }
 

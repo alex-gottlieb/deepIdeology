@@ -1,4 +1,3 @@
-library(keras)
 #' predict_ideology
 #'
 #' This function allows you to scale the ideological slant of Twitter posts.
@@ -20,29 +19,29 @@ predict_ideology <- function(tweets, model="LSTM", embeddings="w2v", embedding_d
   # if Tweet collection contains non-political tweets, filter out before scaling ideology
   if (filter_political_tweets) {
     if (!file.exists("models/politics_classifier.h5")) {
+      print("No pre-trained politics classifier exists. Training model now. This may take a moment.")
       prepare_politics_classifier()
     }
 
-    model <- load_model_hdf5("models/politics_classifier.h5")
+    model <- keras::load_model_hdf5("models/politics_classifier.h5")
     preds <- model %>%
-      predict_classes(texts)
+      keras::predict_classes(texts)
     sprintf("%i political Tweets identified out of %i total Tweets", table(preds)[2], length(preds))
     tweets <- tweets[preds]
   }
 
   # load fit tokenizer, convert raw text to sequences
   if (!file.exists("tokenizers/ideo_tweet_tokenizer")) {
-    print("")
     data("ideo_tweets")
-    tokenizer <- text_tokenizer(num_words = 20000)
-    tokenizer <- fit_text_tokenizer(tokenizer, ideo_tweets$text)
+    tokenizer <- keras::text_tokenizer(num_words = 20000)
+    tokenizer <- keras::fit_text_tokenizer(tokenizer, ideo_tweets$text)
     if (!dir.exists("tokenizers")) {
       dir.create("tokenizers")
     }
-    save_text_tokenizer(tokenizer, "tokenizers/ideo_tweet_tokenizer")
+    keras::save_text_tokenizer(tokenizer, "tokenizers/ideo_tweet_tokenizer")
   }
 
-  tokenizer <- load_text_tokenizer("tokenizers/ideo_tweet_tokenizer")
+  tokenizer <- keras::load_text_tokenizer("tokenizers/ideo_tweet_tokenizer")
 
   # load desired model
   model_name_map <- list(LSTM = "lstm", BiLSTM = "bi-lstm", CBiLSTM = "c-bi-lstm")
@@ -68,15 +67,13 @@ predict_ideology <- function(tweets, model="LSTM", embeddings="w2v", embedding_d
                bidirectional = bidirectional, convolutional = convolutional)
   }
 
-  model <- load_model_hdf5(model_fname)
+  model <- keras::load_model_hdf5(model_fname)
 
   text_vecs <- texts_to_vectors(tweets, tokenizer)
   # generate predictions on new text
   preds <- model %>%
-    predict_proba(text_vecs)
+    keras::predict_proba(text_vecs)
 
   return(preds[,1])
 }
 
-# tweets <- read_csv("data/ideology_classifier_data.csv")
-# ideo <- predict_ideology(tweets$text)

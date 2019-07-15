@@ -1,43 +1,15 @@
-library(keras)
-library(readr)
-library(text2vec)
-library(glmnet)
-library(reticulate)
-library(purrr)
-
-train_baseline <- function(X_train, y_train) {
-  prep_fun <- tolower
-  tok_fun <- word_tokenizer
-  it_train <- itoken(X_train,
-                     preprocessor = prep_fun,
-                     tokenizer = tok_fun,
-                     ids = y_train,
-                     progressbar = FALSE)
-
-  vocab <- create_vocabulary(it_train)
-  vectorizer <- vocab_vectorizer(vocab)
-  dtm_train <- create_dtm(it_train, vectorizer)
-  tfidf <- TfIdf$new()
-  dtm_train_tfidf <- fit_transform(dtm_train,tfidf)
-
-  clf <- cv.glmnet(x=dtm_train_tfidf, y=y_train,
-                   family="binomial")
-
-  save(clf, file="models/logit.Rdata")
-}
-
 prepare_politics_classifier <- function() {
   data("pol_tweets")
 
   if (file.exists("tokenizers/pol_tweet_tokenizer")) {
-    tokenizer <- load_text_tokenizer("tokenizers/pol_tweet_tokenizer")
+    tokenizer <- keras::load_text_tokenizer("tokenizers/pol_tweet_tokenizer")
   } else {
-    tokenizer <- text_tokenizer()
-    tokenizer <- fit_text_tokenizer(tokenizer,pol_tweets$Input.text)
+    tokenizer <- keras::text_tokenizer()
+    tokenizer <- keras::fit_text_tokenizer(tokenizer,pol_tweets$Input.text)
     if (!dir.exists("tokenizers")) {
       dir.create("tokenizers")
     }
-    save_text_tokenizer(tokenizer, "tokenizers/pol_tweet_tokenizer")
+    keras::save_text_tokenizer(tokenizer, "tokenizers/pol_tweet_tokenizer")
   }
 
   texts <- texts_to_vectors(pol_tweets, tokenizer)
@@ -45,15 +17,15 @@ prepare_politics_classifier <- function() {
   word_index <- tokenizer$word_index
   data <- train_test_split(texts, labels)
 
-  lstm <- keras_model_sequential()
+  lstm <- keras::keras_model_sequential()
   lstm %>%
-    layer_embedding(input_dim = length(word_index)+1, output_dim=64) %>%
-    layer_lstm(units=64, dropout=0.5, recurrent_dropout=0.3) %>%
-    layer_dense(units=16, activation='relu') %>%
-    layer_dropout(0.5) %>%
-    layer_dense(units=1, activation='sigmoid')
+    keras::layer_embedding(input_dim = length(word_index)+1, output_dim=64) %>%
+    keras::layer_lstm(units=64, dropout=0.5, recurrent_dropout=0.3) %>%
+    keras::layer_dense(units=16, activation='relu') %>%
+    keras::layer_dropout(0.5) %>%
+    keras::layer_dense(units=1, activation='sigmoid')
 
-  lstm %>% compile(loss='binary_crossentropy',optimizer='adam',metrics=c('accuracy'))
+  lstm %>% keras::compile(loss='binary_crossentropy',optimizer='adam',metrics=c('accuracy'))
 
   if (!dir.exists("models")) {
     dir.create("models")
@@ -63,10 +35,10 @@ prepare_politics_classifier <- function() {
     batch_size=64,
     epochs=2,
     validation_split=0.2,
-    callbacks = list(callback_model_checkpoint(sprintf("models/politics_classifier.h5"),
-                                               monitor = "val_loss",
-                                               save_best_only = TRUE),
-                     callback_early_stopping(monitor = "val_loss", patience=3))
+    callbacks = list(keras::allback_model_checkpoint(sprintf("models/politics_classifier.h5"),
+                                                     monitor = "val_loss",
+                                                     save_best_only = TRUE),
+                     keras::callback_early_stopping(monitor = "val_loss", patience=3))
   )
 }
 
@@ -99,13 +71,13 @@ train_lstm <- function(X_train, y_train, embeddings = "w2v", embedding_dim = 25,
 
   out_fname <- sprintf("lstm_%sd.h5", embedding_dim)
 
-  model <- keras_model_sequential()
+  model <- keras::keras_model_sequential()
   if (embeddings != "random") {
     embedding_fname <- sprintf("embeddings/tweet_%s_%sd.rda", embeddings, embedding_dim)
 
     if (!file.exists(embedding_fname)) {
       sprintf("Embedding file does not exist. Preparing %s-dimensional %s embeddings. This may take a moment", embedding_dim, embeddings)
-      tokenizer <- load_text_tokenizer("tokenizers/ideo_tweet_tokenizer")
+      tokenizer <- keras::load_text_tokenizer("tokenizers/ideo_tweet_tokenizer")
       if (embeddings == "glove") {
         prepare_glove_embeddings(embedding_dim, tokenizer)
       } else {
@@ -116,39 +88,39 @@ train_lstm <- function(X_train, y_train, embeddings = "w2v", embedding_dim = 25,
     emebedding_matrix <- get(load(embedding_fname))
 
     model %>%
-      layer_embedding(input_dim = dim(embedding_matrix)[1], output_dim=embedding_dim,
-                      weights = list(embedding_matrix))
+      keras::layer_embedding(input_dim = dim(embedding_matrix)[1], output_dim=embedding_dim,
+                             weights = list(embedding_matrix))
     out_fname <- sprintf("lstm_%s_%sd.h5", embeddings, embedding_dim)
   } else {
     model %>%
-      layer_embedding(input_dim = 20000+1, output_dim=64)
+      keras::layer_embedding(input_dim = 20000+1, output_dim=64)
     out_fname <- sprintf("lstm_%sd.h5", embedding_dim)
   }
   if (convolutional) {
     model %>%
-      layer_conv_1d(filters=64,
-                    kernel_size = 3,
-                    padding = 'valid',
-                    activation = 'relu',
-                    strides=1) %>%
-      layer_max_pooling_1d(pool_size = 2)
+      keras::layer_conv_1d(filters=64,
+                           kernel_size = 3,
+                           padding = 'valid',
+                           activation = 'relu',
+                           strides=1) %>%
+      keras::layer_max_pooling_1d(pool_size = 2)
     out_fname <- sprintf("c-bi-%s", out_fname)
   }
   if (bidirectional) {
     model %>%
-      bidirectional(layer_lstm(units=64, dropout=0.3, recurrent_dropout=0.3))
+      keras::bidirectional(layer_lstm(units=64, dropout=0.3, recurrent_dropout=0.3))
     if (!convolutional) out_fname <- sprintf("bi-%s", out_fname)
   } else {
     model %>%
-      layer_lstm(units=64, dropout=0.3, recurrent_dropout=0.3)
+      keras::layer_lstm(units=64, dropout=0.3, recurrent_dropout=0.3)
   }
 
   model %>%
-    layer_dense(units=16, activation='relu') %>%
-    layer_dropout(0.5) %>%
-    layer_dense(units=1, activation='sigmoid')
+    keras::layer_dense(units=16, activation='relu') %>%
+    keras::layer_dropout(0.5) %>%
+    keras::layer_dense(units=1, activation='sigmoid')
 
-  model %>% compile(loss='binary_crossentropy',optimizer='adam',metrics=c('accuracy'))
+  model %>% keras::compile(loss='binary_crossentropy',optimizer='adam',metrics=c('accuracy'))
 
   if (!dir.exists("models")) {
     dir.create("models")
@@ -158,10 +130,10 @@ train_lstm <- function(X_train, y_train, embeddings = "w2v", embedding_dim = 25,
     batch_size=64,
     epochs=50,
     validation_split=0.2,
-    callbacks = list(callback_model_checkpoint(sprintf("models/%s", out_fname),
-                                               monitor = "val_loss",
-                                               save_best_only = TRUE),
-                     callback_early_stopping(monitor = "val_loss", patience=3))
+    callbacks = list(keras::callback_model_checkpoint(sprintf("models/%s", out_fname),
+                                                      monitor = "val_loss",
+                                                      save_best_only = TRUE),
+                     keras::callback_early_stopping(monitor = "val_loss", patience=3))
   )
 }
 
@@ -184,9 +156,9 @@ train_lstm <- function(X_train, y_train, embeddings = "w2v", embedding_dim = 25,
 #'
 #' evaluate("models/bi-lstm_w2v_25d.h5", train_test$X_test, train_test$y_test)
 evaluate <- function(model_path, X_test, y_test) {
-  model <- load_model_hdf5(model_path)
+  model <- keras::load_model_hdf5(model_path)
   preds <- model %>%
-    predict_classes(X_test)
+    keras::predict_classes(X_test)
 
   res <- list()
   cm <-as.matrix(table(Actual = y_test, Predicted = preds))
@@ -232,31 +204,8 @@ train_test_split <- function(X, y, test_size=0.2) {
 #' @export
 #' @return matrix of vectorized texts
 texts_to_vectors <- function(texts, tokenizer){
-  sequences <- texts_to_sequences(tokenizer, texts)
-  vecs <- pad_sequences(sequences)
+  sequences <- keras::texts_to_sequences(tokenizer, texts)
+  vecs <- keras::pad_sequences(sequences)
   return(vecs)
 }
-
-# train_all_models <- function(X_train, y_train, tokenizer) {
-#   for (embedding in c("random", "w2v", "glove")) {
-#     for (bidirectional in c(TRUE, FALSE)) {
-#       for (convolutional in c(TRUE, FALSE)) {
-#         if (convolutional & !bidirectional) {
-#           next
-#         } else {
-#           cat(sprintf("Training model with parameters:\n%s embeddings\r\nbidirectional=%s\r\nconvolutional=%s",
-#                   embedding, bidirectional, convolutional))
-#           train_lstm(X_train,
-#                      y_train,
-#                      embedding,
-#                      embedding_dim = 25,
-#                      tokenizer = tokenizer,
-#                      bidirectional = bidirectional,
-#                      convolutional = convolutional)
-#         }
-#       }
-#     }
-#   }
-# }
-
 
