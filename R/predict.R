@@ -30,6 +30,8 @@ predict_ideology <- function(tweets, model="BiLSTM", embeddings="w2v", embedding
     pol_ind <- model %>%
       keras::predict_classes(texts)
     sprintf("%i political Tweets identified out of %i total Tweets", table(preds)[2], length(preds))
+  } else {
+    pol_ind <- 1:length(tweets)
   }
 
   # load fit tokenizer, convert raw text to sequences

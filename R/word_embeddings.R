@@ -11,12 +11,13 @@ prepare_glove_embeddings <- function(embedding_dim, tokenizer) {
   stopifnot(embedding_dim %in% list(25, 50, 100, 200))
 
   cwd <- getwd()
-  setwd("")
+  setwd("~/.deepIdeology/")
   if (!dir.exists("glove.twitter.27B")) {
     dir.create("glove.twitter.27B")
     download <- menu(c("Yes", "No"), title="Cannot find pre-trained GloVe embeddings. Would you like to download now (1.3G)?")
     if (download == 1) download.file("http://nlp.stanford.edu/data/glove.twitter.27B.zip", "glove.twitter.27B/glove.twitter.27B.zip")
-    unzip("glove.twitter.27B.zip", exdir="glove.twitter.27B")
+    unzip("glove.twitter.27B/glove.twitter.27B.zip", exdir="glove.twitter.27B")
+    file.remove("glove.twitter.27B/glove.twitter.27B.zip")
   }
 
   embeddings_file <- sprintf("glove.twitter.27B/glove.twitter.27B.%sd.txt", embedding_dim)
@@ -47,6 +48,7 @@ prepare_glove_embeddings <- function(embedding_dim, tokenizer) {
     dir.create("embeddings")
   }
   save(embedding_matrix, file = out_file)
+  setwd(cwd)
 }
 
 
@@ -61,6 +63,9 @@ prepare_glove_embeddings <- function(embedding_dim, tokenizer) {
 #' @note Embeddings are saved as Rdata to a folder called embeddings with the file format "tweet_wv2_\{embedding_dim\}.rda"
 
 prepare_w2v_embeddings <- function(texts, embedding_dim, tokenizer) {
+
+  cwd <- getwd()
+  setwd("~/.deepIdeology/")
 
   skipgrams_generator <- function(text, tokenizer, window_size, negative_samples) {
     gen <- keras::texts_to_sequences_generator(tokenizer, sample(text))

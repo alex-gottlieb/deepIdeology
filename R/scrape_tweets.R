@@ -1,10 +1,10 @@
-#' setup_dependencies
+#' complete_setup
 #'
-#' This function should be called after package installation to properly set up dependencies.
+#' This function should be called after package installation to properly set up dependencies and create file caching system.
 #' @export
-setup_dependencies <- function() {
+complete_setup <- function() {
   library(keras)
-  install_keras()
+  install_keras(tensorflow = "1.9")
 
   library(devtools)
   install_version("rmongodb", version = "1.8.0", repos = "http://cran.us.r-project.org")
