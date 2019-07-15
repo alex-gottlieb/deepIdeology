@@ -12,7 +12,7 @@ Description: This package allows users to identify the ideological leanings of T
 Depends: 
     R (>= 3.4.4),
     dplyr,
-    keras
+    keras (<= 2.2.0)
 License: MIT
 Encoding: UTF-8
 LazyData: true
