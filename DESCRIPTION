@@ -9,13 +9,12 @@ Description: This package allows users to identify the ideological leanings of T
     the Amazon Mechanical Turk crowd-sourcing platform. The best-performing models are able to classify Tweets are 
     liberal- or conservative-leaning with 86.90% accuracy and are able to capture both directionality and degree of
     slant.
-Depends: R (>= 3.4.4)
+Depends: 
+    R (>= 3.4.4),
+    dplyr,
+    keras
 License: MIT
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.1.9000
-Imports: 
-    keras,
-    dplyr,
-    smappR,
-    devtools
+
