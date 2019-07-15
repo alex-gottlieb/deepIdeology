@@ -17,35 +17,37 @@
 predict_ideology <- function(tweets, model="BiLSTM", embeddings="w2v", embedding_dim=25, filter_political_tweets=FALSE) {
   stopifnot(model %in% list("LSTM", "BiLSTM", "C-BiLSTM"))
 
+  cwd <- getwd()
+  setwd("~/.deepIdeology/")
   # if Tweet collection contains non-political tweets, filter out before scaling ideology
   if (filter_political_tweets) {
-    if (!file.exists("~/.deepIdeology/models/politics_classifier.h5")) {
+    if (!file.exists("models/politics_classifier.h5")) {
       print("No pre-trained politics classifier exists. Training model now. This may take a moment.")
       prepare_politics_classifier()
     }
 
-    model <- keras::load_model_hdf5("~/.deepIdeology/models/politics_classifier.h5")
+    model <- keras::load_model_hdf5("models/politics_classifier.h5")
     pol_ind <- model %>%
       keras::predict_classes(texts)
     sprintf("%i political Tweets identified out of %i total Tweets", table(preds)[2], length(preds))
   }
 
   # load fit tokenizer, convert raw text to sequences
-  if (!file.exists("~/.deepIdeology/tokenizers/ideo_tweet_tokenizer")) {
+  if (!file.exists("tokenizers/ideo_tweet_tokenizer")) {
     data("ideo_tweets")
     tokenizer <- keras::text_tokenizer(num_words = 20000)
     tokenizer <- keras::fit_text_tokenizer(tokenizer, ideo_tweets$text)
-    if (!dir.exists("~/.deepIdeology/tokenizers")) {
-      dir.create("~/.deepIdeology/tokenizers")
+    if (!dir.exists("tokenizers")) {
+      dir.create("tokenizers")
     }
-    keras::save_text_tokenizer(tokenizer, "~/.deepIdeology/tokenizers/ideo_tweet_tokenizer")
+    keras::save_text_tokenizer(tokenizer, "tokenizers/ideo_tweet_tokenizer")
   }
 
-  tokenizer <- keras::load_text_tokenizer("~/.deepIdeology/tokenizers/ideo_tweet_tokenizer")
+  tokenizer <- keras::load_text_tokenizer("tokenizers/ideo_tweet_tokenizer")
 
   # load desired model
   model_name_map <- list(LSTM = "lstm", BiLSTM = "bi-lstm", CBiLSTM = "c-bi-lstm")
-  model_fname <- sprintf("~/.deepIdeology/models/%s_%s_%sd.h5", model_name_map[[model]], embeddings, embedding_dim)
+  model_fname <- sprintf("models/%s_%s_%sd.h5", model_name_map[[model]], embeddings, embedding_dim)
 
   if (!file.exists(model_fname)) {
     print("No pre-trained model with that configuration exists. Training model now. This may take a moment.")
@@ -76,6 +78,7 @@ predict_ideology <- function(tweets, model="BiLSTM", embeddings="w2v", embedding
 
   preds[-pol_ind] <- NULL
 
+  setwd(cwd)
   return(preds[,1])
 }
 

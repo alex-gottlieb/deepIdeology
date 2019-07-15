@@ -10,14 +10,16 @@
 prepare_glove_embeddings <- function(embedding_dim, tokenizer) {
   stopifnot(embedding_dim %in% list(25, 50, 100, 200))
 
-  if (!dir.exists("~/.deepIdeology/glove.twitter.27B")) {
-    dir.create("~/.deepIdeology/glove.twitter.27B")
+  cwd <- getwd()
+  setwd("")
+  if (!dir.exists("glove.twitter.27B")) {
+    dir.create("glove.twitter.27B")
     download <- menu(c("Yes", "No"), title="Cannot find pre-trained GloVe embeddings. Would you like to download now (1.3G)?")
-    if (download == 1) download.file("http://nlp.stanford.edu/data/glove.twitter.27B.zip", "~/.deepIdeology/glove.twitter.27B/glove.twitter.27B.zip")
-    unzip("glove.twitter.27B.zip", exdir="~/.deepIdeology/glove.twitter.27B")
+    if (download == 1) download.file("http://nlp.stanford.edu/data/glove.twitter.27B.zip", "glove.twitter.27B/glove.twitter.27B.zip")
+    unzip("glove.twitter.27B.zip", exdir="glove.twitter.27B")
   }
 
-  embeddings_file <- sprintf("~/.deepIdeology/glove.twitter.27B/glove.twitter.27B.%sd.txt", embedding_dim)
+  embeddings_file <- sprintf("glove.twitter.27B/glove.twitter.27B.%sd.txt", embedding_dim)
   word_index <- tokenizer$word_index
   embeddings_index <- new.env(parent = emptyenv())
   lines <- readLines(embeddings_file)
@@ -40,9 +42,9 @@ prepare_glove_embeddings <- function(embedding_dim, tokenizer) {
     }
   }
 
-  out_file <- sprintf("~/.deepIdeology/embeddings/tweet_glove_%sd.rda", embedding_dim)
-  if (!dir.exists("~/.deepIdeology/embeddings")) {
-    dir.create("~/.deepIdeology/embeddings")
+  out_file <- sprintf("embeddings/tweet_glove_%sd.rda", embedding_dim)
+  if (!dir.exists("embeddings")) {
+    dir.create("embeddings")
   }
   save(embedding_matrix, file = out_file)
 }
@@ -61,15 +63,15 @@ prepare_glove_embeddings <- function(embedding_dim, tokenizer) {
 prepare_w2v_embeddings <- function(texts, embedding_dim, tokenizer) {
 
   skipgrams_generator <- function(text, tokenizer, window_size, negative_samples) {
-    gen <- texts_to_sequences_generator(tokenizer, sample(text))
+    gen <- keras::texts_to_sequences_generator(tokenizer, sample(text))
     function() {
-      skip <- generator_next(gen) %>%
-        skipgrams(
+      skip <- keras::generator_next(gen) %>%
+        keras::skipgrams(
           vocabulary_size = tokenizer$num_words,
           window_size = window_size,
           negative_samples = 1
         )
-      x <- transpose(skip$couples) %>% map(. %>% unlist %>% as.matrix(ncol = 1))
+      x <- purrr::transpose(skip$couples) %>% purrr::map(. %>% unlist %>% as.matrix(ncol = 1))
       y <- skip$labels %>% as.matrix(ncol = 1)
       list(x, y)
     }
@@ -78,10 +80,10 @@ prepare_w2v_embeddings <- function(texts, embedding_dim, tokenizer) {
   skip_window <- 5       # How many words to consider left and right.
   num_sampled <- 1       # Number of negative examples to sample for each word.
 
-  input_target <- layer_input(shape = 1)
-  input_context <- layer_input(shape = 1)
+  input_target <- keras::layer_input(shape = 1)
+  input_context <- keras::layer_input(shape = 1)
 
-  embedding <- layer_embedding(
+  embedding <- keras::layer_embedding(
     input_dim = tokenizer$num_words + 1,
     output_dim = embedding_dim,
     input_length = 1,
@@ -90,43 +92,43 @@ prepare_w2v_embeddings <- function(texts, embedding_dim, tokenizer) {
 
   target_vector <- input_target %>%
     embedding() %>%
-    layer_flatten()
+    keras::layer_flatten()
 
   context_vector <- input_context %>%
     embedding() %>%
-    layer_flatten()
+    keras::layer_flatten()
 
-  dot_product <- layer_dot(list(target_vector, context_vector), axes = 1)
-  output <- layer_dense(dot_product, units = 1, activation = "sigmoid")
+  dot_product <- keras::layer_dot(list(target_vector, context_vector), axes = 1)
+  output <- keras::layer_dense(dot_product, units = 1, activation = "sigmoid")
 
-  model <- keras_model(list(input_target, input_context), output)
-  model %>% compile(loss = "binary_crossentropy", optimizer = "adam")
-  summary(model)
+  model <- keras::keras_model(list(input_target, input_context), output)
+  model %>% keras::compile(loss = "binary_crossentropy", optimizer = "adam")
 
 
-  model %>% fit_generator(skipgrams_generator(texts,
-                                              tokenizer,
-                                              skip_window,
-                                              negative_samples),
+  model %>% keras::fit_generator(skipgrams_generator(texts,
+                                                     tokenizer,
+                                                     skip_window,
+                                                     negative_samples),
                           steps_per_epoch=10000,
                           epochs=10,
-                          callbacks = list(callback_model_checkpoint(sprintf("~/.deepIdeology/models/w2v_%sd.h5", embedding_dim),
-                                                                     monitor = "loss",
-                                                                     save_best_only = TRUE),
-                                           callback_early_stopping(monitor = "loss", patience=2))
+                          callbacks = list(keras::callback_model_checkpoint(sprintf("models/w2v_%sd.h5", embedding_dim),
+                                                                            monitor = "loss",
+                                                                            save_best_only = TRUE),
+                                           keras::callback_early_stopping(monitor = "loss", patience=2))
   )
 
-  model <- load_model_hdf5(sprintf("~/.deepIdeology/models/w2v_%sd.h5", embedding_dim))
-  embedding_matrix <- get_weights(model)[[1]]
+  model <- keras::load_model_hdf5(sprintf("models/w2v_%sd.h5", embedding_dim))
+  embedding_matrix <- keras::get_weights(model)[[1]]
   words <- dplyr::data_frame(word=names(tokenizer$word_index),
                       id=as.integer(unlist(tokenizer$word_index)))
   words <- words %>% dplyr::filter(id <= tokenizer$num_words) %>% dplyr::arrange(id)
   row.names(embedding_matrix) <- c("UNK",words$word)
 
-  out_file <- sprintf("~/.deepIdeology/embeddings/tweet_wv2_%sd.rda", embedding_dim)
+  out_file <- sprintf("embeddings/tweet_wv2_%sd.rda", embedding_dim)
 
-  if (!dir.exists("~/.deepIdeology/embeddings")) {
-    dir.create("~/.deepIdeology/embeddings")
+  if (!dir.exists("embeddings")) {
+    dir.create("embeddings")
   }
   save(embedding_matrix,file=out_file)
+  setwd(cwd)
 }
