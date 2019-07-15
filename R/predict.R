@@ -6,7 +6,7 @@
 #' @param embeddings Type of word embedding algorithm to use. Options are "w2v" (word2vec), "glove", or "random" (random initialization).
 #' @param embedding_dim Length of word embeddings to use. Options are 25, 50, 100, or 200.
 #' @param filter_political_tweets If Tweet collection may contain non-political Tweets, optionally filter them out before ideological scaling.
-#' @return Vector of float values between 0 and 1, where values closer to 0 indiciate liberal ideological slant, values closer to 1 indicate conservative ideological slant, and values near 0.5 indicate a lack of ideological leaning.
+#' @return Vector of float values between 0 and 1, where values closer to 0 indiciate liberal ideological slant, values closer to 1 indicate conservative ideological slant, and values near 0.5 indicate a lack of ideological leaning. Non-political Tweets return return a NULL value.
 #' @export
 #' @examples
 #' tweets <- c("Make no mistake- the President of the United States is actively sabotaging the health insurance of millions of Americans with this action.",
@@ -24,10 +24,9 @@ predict_ideology <- function(tweets, model="LSTM", embeddings="w2v", embedding_d
     }
 
     model <- keras::load_model_hdf5("models/politics_classifier.h5")
-    preds <- model %>%
+    pol_ind <- model %>%
       keras::predict_classes(texts)
     sprintf("%i political Tweets identified out of %i total Tweets", table(preds)[2], length(preds))
-    tweets <- tweets[preds]
   }
 
   # load fit tokenizer, convert raw text to sequences
@@ -73,6 +72,8 @@ predict_ideology <- function(tweets, model="LSTM", embeddings="w2v", embedding_d
   # generate predictions on new text
   preds <- model %>%
     keras::predict_proba(text_vecs)
+
+  preds[-pol_ind] <- NULL
 
   return(preds[,1])
 }
