@@ -4,7 +4,7 @@
 \alias{predict_ideology}
 \title{predict_ideology}
 \usage{
-predict_ideology(tweets, model = "LSTM", embeddings = "w2v",
+predict_ideology(tweets, model = "BiLSTM", embeddings = "w2v",
   embedding_dim = 25, filter_political_tweets = FALSE)
 }
 \arguments{
@@ -19,7 +19,7 @@ predict_ideology(tweets, model = "LSTM", embeddings = "w2v",
 \item{filter_political_tweets}{If Tweet collection may contain non-political Tweets, optionally filter them out before ideological scaling.}
 }
 \value{
-Vector of float values between 0 and 1, where values closer to 0 indiciate liberal ideological slant, values closer to 1 indicate conservative ideological slant, and values near 0.5 indicate a lack of ideological leaning.
+Vector of float values between 0 and 1, where values closer to 0 indiciate liberal ideological slant, values closer to 1 indicate conservative ideological slant, and values near 0.5 indicate a lack of ideological leaning. Non-political Tweets return return a NULL value.
 }
 \description{
 This function allows you to scale the ideological slant of Twitter posts.
@@ -28,4 +28,5 @@ This function allows you to scale the ideological slant of Twitter posts.
 tweets <- c("Make no mistake- the President of the United States is actively sabotaging the health insurance of millions of Americans with this action.",
             "This MLK Day, 50 years after his death, we honor Dr. King's legacy. He lived for the causes of justice and equality, and opened the door of opportunity for millions of Americans. America is a better; freer nation because of it.",
             "I’m disappointed in Senate Democrats for shutting down the government. #SchumerShutdown")
+preds <- predict_ideology(tweets, model="BiLSTM", embeddings="w2v")
 }

@@ -1,6 +1,3 @@
-library(keras)
-library(dplyr)
-
 #' prepare_glove_embeddings
 #'
 #' This function prepares an embedding matrix containing the words in the training data set from pre-trained GloVe embeddings.
@@ -13,14 +10,14 @@ library(dplyr)
 prepare_glove_embeddings <- function(embedding_dim, tokenizer) {
   stopifnot(embedding_dim %in% list(25, 50, 100, 200))
 
-  if (!dir.exists("glove.twitter.27B")) {
-    dir.create("glove.twitter.27B")
+  if (!dir.exists("~/.deepIdeology/glove.twitter.27B")) {
+    dir.create("~/.deepIdeology/glove.twitter.27B")
     download <- menu(c("Yes", "No"), title="Cannot find pre-trained GloVe embeddings. Would you like to download now (1.3G)?")
-    if (download == 1) download.file("http://nlp.stanford.edu/data/glove.twitter.27B.zip", "glove.twitter.27B/glove.twitter.27B.zip")
-    unzip("glove.twitter.27B.zip", exdir="glove.twitter.27B")
+    if (download == 1) download.file("http://nlp.stanford.edu/data/glove.twitter.27B.zip", "~/.deepIdeology/glove.twitter.27B/glove.twitter.27B.zip")
+    unzip("glove.twitter.27B.zip", exdir="~/.deepIdeology/glove.twitter.27B")
   }
 
-  embeddings_file <- sprintf("glove.twitter.27B/glove.twitter.27B.%sd.txt", embedding_dim)
+  embeddings_file <- sprintf("~/.deepIdeology/glove.twitter.27B/glove.twitter.27B.%sd.txt", embedding_dim)
   word_index <- tokenizer$word_index
   embeddings_index <- new.env(parent = emptyenv())
   lines <- readLines(embeddings_file)
@@ -43,9 +40,9 @@ prepare_glove_embeddings <- function(embedding_dim, tokenizer) {
     }
   }
 
-  out_file <- sprintf("embeddings/tweet_glove_%sd.rda", embedding_dim)
-  if (!dir.exists("embeddings")) {
-    dir.create("embeddings")
+  out_file <- sprintf("~/.deepIdeology/embeddings/tweet_glove_%sd.rda", embedding_dim)
+  if (!dir.exists("~/.deepIdeology/embeddings")) {
+    dir.create("~/.deepIdeology/embeddings")
   }
   save(embedding_matrix, file = out_file)
 }
@@ -113,23 +110,23 @@ prepare_w2v_embeddings <- function(texts, embedding_dim, tokenizer) {
                                               negative_samples),
                           steps_per_epoch=10000,
                           epochs=10,
-                          callbacks = list(callback_model_checkpoint(sprintf("data-raw/w2v_%sd.h5", embedding_dim),
+                          callbacks = list(callback_model_checkpoint(sprintf("~/.deepIdeology/models/w2v_%sd.h5", embedding_dim),
                                                                      monitor = "loss",
                                                                      save_best_only = TRUE),
                                            callback_early_stopping(monitor = "loss", patience=2))
   )
 
-  model <- load_model_hdf5(sprintf("data-raw/w2v_%sd.h5", embedding_dim))
+  model <- load_model_hdf5(sprintf("~/.deepIdeology/models/w2v_%sd.h5", embedding_dim))
   embedding_matrix <- get_weights(model)[[1]]
   words <- dplyr::data_frame(word=names(tokenizer$word_index),
                       id=as.integer(unlist(tokenizer$word_index)))
   words <- words %>% dplyr::filter(id <= tokenizer$num_words) %>% dplyr::arrange(id)
   row.names(embedding_matrix) <- c("UNK",words$word)
 
-  out_file <- sprintf("embeddings/tweet_wv2_%sd.rda", embedding_dim)
+  out_file <- sprintf("~/.deepIdeology/embeddings/tweet_wv2_%sd.rda", embedding_dim)
 
-  if (!dir.exists("embeddings")) {
-    dir.create("embeddings")
+  if (!dir.exists("~/.deepIdeology/embeddings")) {
+    dir.create("~/.deepIdeology/embeddings")
   }
   save(embedding_matrix,file=out_file)
 }

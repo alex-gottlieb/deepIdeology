@@ -1,15 +1,15 @@
 prepare_politics_classifier <- function() {
   data("pol_tweets")
 
-  if (file.exists("tokenizers/pol_tweet_tokenizer")) {
+  if (file.exists("~/.deepIdeology/tokenizers/pol_tweet_tokenizer")) {
     tokenizer <- keras::load_text_tokenizer("tokenizers/pol_tweet_tokenizer")
   } else {
     tokenizer <- keras::text_tokenizer()
     tokenizer <- keras::fit_text_tokenizer(tokenizer,pol_tweets$Input.text)
-    if (!dir.exists("tokenizers")) {
-      dir.create("tokenizers")
+    if (!dir.exists("~/.deepIdeology/tokenizers")) {
+      dir.create("~/.deepIdeology/tokenizers")
     }
-    keras::save_text_tokenizer(tokenizer, "tokenizers/pol_tweet_tokenizer")
+    keras::save_text_tokenizer(tokenizer, "~/.deepIdeology/tokenizers/pol_tweet_tokenizer")
   }
 
   texts <- texts_to_vectors(pol_tweets, tokenizer)
@@ -27,15 +27,15 @@ prepare_politics_classifier <- function() {
 
   lstm %>% keras::compile(loss='binary_crossentropy',optimizer='adam',metrics=c('accuracy'))
 
-  if (!dir.exists("models")) {
-    dir.create("models")
+  if (!dir.exists("~/.deepIdeology/models")) {
+    dir.create("~/.deepIdeology/models")
   }
   lstm %>% keras::fit(
     X_train, y_train,
     batch_size=64,
     epochs=2,
     validation_split=0.2,
-    callbacks = list(keras::allback_model_checkpoint(sprintf("models/politics_classifier.h5"),
+    callbacks = list(keras::allback_model_checkpoint(sprintf("~/.deepIdeology/models/politics_classifier.h5"),
                                                      monitor = "val_loss",
                                                      save_best_only = TRUE),
                      keras::callback_early_stopping(monitor = "val_loss", patience=3))
@@ -73,11 +73,11 @@ train_lstm <- function(X_train, y_train, embeddings = "w2v", embedding_dim = 25,
 
   model <- keras::keras_model_sequential()
   if (embeddings != "random") {
-    embedding_fname <- sprintf("embeddings/tweet_%s_%sd.rda", embeddings, embedding_dim)
+    embedding_fname <- sprintf("~/.deepIdeology/embeddings/tweet_%s_%sd.rda", embeddings, embedding_dim)
 
     if (!file.exists(embedding_fname)) {
       sprintf("Embedding file does not exist. Preparing %s-dimensional %s embeddings. This may take a moment", embedding_dim, embeddings)
-      tokenizer <- keras::load_text_tokenizer("tokenizers/ideo_tweet_tokenizer")
+      tokenizer <- keras::load_text_tokenizer("~/.deepIdeology/tokenizers/ideo_tweet_tokenizer")
       if (embeddings == "glove") {
         prepare_glove_embeddings(embedding_dim, tokenizer)
       } else {
@@ -130,7 +130,7 @@ train_lstm <- function(X_train, y_train, embeddings = "w2v", embedding_dim = 25,
     batch_size=64,
     epochs=50,
     validation_split=0.2,
-    callbacks = list(keras::callback_model_checkpoint(sprintf("models/%s", out_fname),
+    callbacks = list(keras::callback_model_checkpoint(sprintf("~/.deepIdeology/models/%s", out_fname),
                                                       monitor = "val_loss",
                                                       save_best_only = TRUE),
                      keras::callback_early_stopping(monitor = "val_loss", patience=3))

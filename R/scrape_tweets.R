@@ -9,6 +9,10 @@ setup_dependencies <- function() {
   library(devtools)
   install_version("rmongodb", version = "1.8.0", repos = "http://cran.us.r-project.org")
   install_github("SMAPPNYU/smappR")
+
+  if (!dir.exists("~/.deepIdeology")) {
+    dir.create("~/.deepIdeology")
+  }
 }
 
 #' scrape_tweets
