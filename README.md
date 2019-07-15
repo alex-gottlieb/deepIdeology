@@ -45,11 +45,12 @@ tweets <- c("Republicans are moving full steam ahead on their #GOPTaxScam, which
 predict_ideology(tweets)
 ```
 
-### Caveats
+#### Caveats
 The data set on which the models are trained is roughly 75 percent Tweets from "elite" users (e.g. politicians, media outlets, think tanks, etc.), with the remaining 25 percent coming from "mass" users. In validating the models, it became apparent that they were much more capable of identifying slant from the former group, which in many ways presents an idealized scenario of clearly- (and often forcefully-) articulated ideological leanings along with (mostly) consistent grammar and spelling. Predictions of "mass" Tweets were largely clustered around the middle of the spectrum, not because they were necessarily more moderate, but because the models could not make a confident prediction either way. Accordingly, researchers should use caution when using this package to scale Tweets from groups other than poltiical elites.
 
 Additionally, the Tweets used to train the models were scraped and labeled in early 2018. The ideological spectrum is, of course, not a static entity, and where particular issues and actors fall on that spectrum can shift over time. Additionally, new issues and actors have emerged on the political scene since this data was collected, so stances on more recent topics (e.g. Brett Kavanaugh or the Green New Deal) that might provide a great deal of information to a political observer about someone's leanings would not provide any additional information to the model. 
 
 Both of these issues can be addressed with the continued augmentation of the training data set with labeled examples, so if anyone is interested in continuing this work, please be in touch!
 
+## Performance and Validation
 
