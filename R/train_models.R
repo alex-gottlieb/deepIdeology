@@ -1,7 +1,7 @@
 prepare_politics_classifier <- function() {
   data("pol_tweets")
   cwd <- getwd()
-  setwd("")
+  setwd("~/.deepIdeology")
   if (file.exists("tokenizers/pol_tweet_tokenizer")) {
     tokenizer <- keras::load_text_tokenizer("tokenizers/pol_tweet_tokenizer")
   } else {
